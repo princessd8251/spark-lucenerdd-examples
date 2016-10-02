@@ -1,6 +1,6 @@
 package org.zouzias.spark.lucenerdd.examples.linkage
 
-import org.apache.spark.sql.{Row, SQLContext, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.SparkConf
 import org.zouzias.spark.lucenerdd.LuceneRDD
 import org.zouzias.spark.lucenerdd.logging.Logging
