@@ -51,22 +51,21 @@ object SpatialShapeRDDWorldCitiesSelfLinkage extends Logging {
 
     val cities = citiesDF.select("Latitude", "Longitude", "City", "Country")
       .map(row => ((row.getString(1).toDouble, row.getString(0).toDouble), (row.getString(2), row.getString(3))))
+      .rdd.zipWithIndex().map(_.swap)
 
-
-    val shapes = ShapeRDD(cities)
-
-    shapes.cache
-    shapes.count
     logInfo("Max mind cities loaded successfully")
 
-    val rdds = cities.rdd.randomSplit(Array(1,1,1,1))
+    val rdds = cities.randomSplit(Array(1,1,1,1))
 
     // Link and fetch top-3
     val linkages: Array[RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])]] =
     rdds.map { case rdd =>
+      val shapes = ShapeRDD(cities)
       shapes.linkByRadius(rdd, { x: ((Double, Double), (String, String)) => x._1 }, 3)
     }
 
+    val shapes = ShapeRDD(cities)
+    shapes.cache
     val finalLinkage = linkages.reduce((a: RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])],
       b: RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])]) => a.union(b))
 
