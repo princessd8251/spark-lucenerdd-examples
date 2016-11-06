@@ -1,10 +1,12 @@
 package org.zouzias.spark.lucenerdd.examples.linkage.shape
 
 import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.zouzias.spark.lucenerdd.logging.Logging
+import org.zouzias.spark.lucenerdd.models.SparkScoreDoc
 import org.zouzias.spark.lucenerdd.spatial.shape._
 import org.zouzias.spark.lucenerdd.spatial.shape.rdds.ShapeRDD
 
@@ -57,12 +59,19 @@ object SpatialShapeRDDWorldCitiesSelfLinkage extends Logging {
     shapes.count
     logInfo("Max mind cities loaded successfully")
 
-    // Link and fetch top-3
-    val linkage = shapes.linkByRadius(cities.rdd, {x:((Double, Double), (String, String)) => x._1}, 3)
+    val rdds = cities.rdd.randomSplit(Array(1,1,1,1))
 
+    // Link and fetch top-3
+    val linkages: Array[RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])]] =
+    rdds.map { case rdd =>
+      shapes.linkByRadius(rdd, { x: ((Double, Double), (String, String)) => x._1 }, 3)
+    }
+
+    val finalLinkage = linkages.reduce((a: RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])],
+      b: RDD[(((Double, Double), (String, String)), Array[SparkScoreDoc])]) => a.union(b))
 
     import spark.implicits._
-    val linkedDF = spark.createDataFrame(shapes.postLinker(linkage))
+    val linkedDF = spark.createDataFrame(shapes.postLinker(finalLinkage))
 
     linkedDF.write.mode(SaveMode.Overwrite)
       .parquet(s"recordlinkage/timing/vshaperdd-max-mind-cities-linkage-result-${today}-${executorMemory}-${executorInstances}-${executorCores}.parquet")
