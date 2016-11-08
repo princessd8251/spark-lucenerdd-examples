@@ -64,6 +64,8 @@ object SpatialShapeRDDWorldCitiesSelfLinkage extends Logging {
     import spark.implicits._
     val linkedDF = spark.createDataFrame(shapes.postLinker(linkage))
 
+    linkedDF.rdd.foreach(println)
+
     linkedDF.write.mode(SaveMode.Overwrite)
       .parquet(s"recordlinkage/timing/vshaperdd-max-mind-cities-linkage-result-${today}-${executorMemory}-${executorInstances}-${executorCores}.parquet")
 
